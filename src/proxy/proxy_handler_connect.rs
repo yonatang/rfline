@@ -2,6 +2,7 @@ use std::thread;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, copy};
 use tokio::net::TcpStream;
 use tokio::{join, spawn};
+use tokio::task::JoinHandle;
 use crate::proxy::proxy_handler::Target;
 use crate::proxy::server::{PResult};
 
@@ -28,7 +29,7 @@ pub async fn handle(target: Target, local_stream: TcpStream) -> PResult<()> {
     let (mut remote_read, mut remote_write) = remote_stream.into_split();
 
 
-    let local_write_handler: tokio::task::JoinHandle<std::io::Result<()>> = spawn(async move {
+    let local_write_handler: JoinHandle<std::io::Result<()>> = spawn(async move {
         log::debug!("Sending Connection Established");
         local_write.write_all(b"HTTP/1.1 200 Connection established\r\n\r\n").await?;
         local_write.flush().await?;
@@ -39,7 +40,7 @@ pub async fn handle(target: Target, local_stream: TcpStream) -> PResult<()> {
 
         Ok(())
     });
-    let remote_write_handler: tokio::task::JoinHandle<std::io::Result<()>> = spawn(async move {
+    let remote_write_handler: JoinHandle<std::io::Result<()>> = spawn(async move {
         log::debug!("Reading from local in {:?}",thread::current().id());
         copy(&mut local_buf_reader, &mut remote_write).await?;
 
